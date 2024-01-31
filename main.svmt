@@ -1,0 +1,42 @@
+region      //                     r
+ct_get 0    //                     r,r
+rw          //                     {+r},r
+cap_le      //                     {c≤+r},r
+ct_get 0    //                     {c≤+r},{c≤+r},r
+req         //                     {c≤+r},r
+all         //                     a,{c≤+r},r
+ct_get 0    //                     a,a,{c≤+r},r
+req         //  a                   a,{c≤+r},r
+ct_get 2    //  a                   r,a,{c≤+r},r
+some        //  a                   b,r,a,{c≤+r},r
+ct_get 3    //  a                   {c≤+r},b,r,a,{c≤+r},r
+ct_get 5    //  a                   r,{c≤+r},b,r,a,{c≤+r},r
+ct_get 4    //  a                   a,r,{c≤+r},b,r,a,{c≤+r},r
+ct_get 0    //  a                   a,a,r,{c≤+r},b,r,a,{c≤+r},r
+tuple 2     //  a                   a*a@r,{c≤+r},b,r,a,{c≤+r},r
+ct_get 2    //  a                   b,a*a@r,{c≤+r},b,r,a,{c≤+r},r
+func 2      //  a                   [{c≤+r}](b,a*a@r),b,r,a,{c≤+r},r
+tuple 2     //  a                   [{c≤+r}](b,a*a@r)*b@r,a,{c≤+r},r
+emos        //  a                   some b.[{c≤+r}](b,a*a@r)*b@r,a,{c≤+r},r
+req         //  a,k                 a,{c≤+r},r
+ct_get 2    //  a,k                 r,a,{c≤+r},r
+handle      //  a,k                 handle(r),a,{c≤+r},r
+req         //  a,k,r               a,{c≤+r},r
+ct_get 2    //  a,k,r               r,a,{c≤+r},r
+ct_get 1    //  a,k,r               a,r,a,{c≤+r},r
+ct_get 0    //  a,k,r               a,a,r,a,{c≤+r},r
+tuple 2     //  a,k,r               a*a@r,a,{c≤+r},r
+get 2       //  r,a,k,r             a*a@r,a,{c≤+r},r
+malloc      //  (_,_),a,k,r         a,{c≤+r},r
+get 1       //  a,(_,_),a,k,r       a,{c≤+r},r
+init 0      //  (a,_),a,k,r         a,{c≤+r},r
+get 1       //  a,(a,_),a,k,r       a,{c≤+r},r
+init 1      //  (a,a),a,k,r         a,{c≤+r},r
+get 2       //  k,(a,a),a,k,r       a,{c≤+r},r
+unpack      //  (f,c),(a,a),a,k,r   a,{c≤+r},r
+proj 1      //  c,(a,a),a,k,r       a,{c≤+r},r
+get 3       //  k,c,(a,a),a,k,r     a,{c≤+r},r
+unpack      //  (f,c),c,(a,a),a,k,r a,{c≤+r},r
+proj 0      //  f,c,(a,a),a,k,r     a,{c≤+r},r
+call        //  --                  --
+end         //  --                  --
