@@ -3,7 +3,7 @@ import gleam/int
 import gleam/bytes_builder.{type BytesBuilder, from_bit_array}
 import simplifile
 import party.{
-  alphanum, alt, char, digit, do, letter, many, many1, perhaps, return, satisfy,
+  alphanum, either, char, digit, do, letter, many, many1, perhaps, return, satisfy,
   string,
 }
 
@@ -21,7 +21,7 @@ fn parameterized(opcode) -> party.Parser(BytesBuilder, Nil) {
 
 fn instr() -> party.Parser(BytesBuilder, Nil) {
   use first_char <- do(letter())
-  use rest <- do(many(alt(alphanum(), char("_"))))
+  use rest <- do(many(either(alphanum(), char("_"))))
   let s = first_char <> string.concat(rest)
   use bytes <- do(case s {
     "req" -> return(e(<<0>>))
@@ -52,7 +52,7 @@ fn instr() -> party.Parser(BytesBuilder, Nil) {
     "call" -> return(e(<<25>>))
     s -> panic as { "unknown instruction " <> s }
   })
-  use _ <- do(many(alt(char(" "), char("\t"))))
+  use _ <- do(many(either(char(" "), char("\t"))))
   use _ <- do(
     perhaps({
       use _ <- do(string("//"))
