@@ -3,8 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, Type, Compose, Exists, Forall, ForallRgn, Func,
-  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  type Expr, type Stmt, type Type, Compose, Exists, Forall, ForallRgn, Func,
+  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType, Type,
 }
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
@@ -13,6 +13,7 @@ import party.{
 }
 import gleam/int
 import gleam/list
+import gleam/result
 
 fn parse_lit() -> Parser(Expr, Nil) {
   use n <- do(try(digits(), int.parse))
@@ -93,21 +94,24 @@ fn parse_forall() -> Parser(Type, Nil) {
   use <- ws()
   use var <- do(word())
   use <- ws()
-  use res <- do(perhaps(char(":")))
+  use _ <- do(char(":"))
+  use res <- do(perhaps(string("Rgn")))
   case res {
     Ok(_) -> {
+      use res <- do(perhaps(char("!")))
+      let unique = result.is_ok(res)
       use <- ws()
+      use _ <- do(char("."))
+      use body <- do(lazy(parse_type))
+      return(ForallRgn(var, unique, body))
+    }
+    Error(Nil) -> {
       use size <- do(try(digits(), int.parse))
       use _ <- do(string("byte"))
       use <- ws()
       use _ <- do(char("."))
       use body <- do(lazy(parse_type))
       return(Forall(var, size, body))
-    }
-    Error(Nil) -> {
-      use _ <- do(char("."))
-      use body <- do(lazy(parse_type))
-      return(ForallRgn(var, body))
     }
   }
 }
@@ -142,7 +146,6 @@ fn parse_handle() -> Parser(Type, e) {
 fn parse_comment() -> Parser(String, e) {
   use _ <- do(string("/*"))
   use _ <- do(until(do: satisfy(fn(_) { True }), until: string("*/")))
-  use _ <- do(string("*/"))
   return("")
 }
 
@@ -196,6 +199,7 @@ fn parse_stmt() -> Parser(Stmt, Nil) {
   use t <- do(parse_type())
   use _ <- do(char("="))
   use e <- do(parse_expr())
+  use _ <- do(char(";"))
   use <- ws()
   return(Stmt(name, t, e))
 }

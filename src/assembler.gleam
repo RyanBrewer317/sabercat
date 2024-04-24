@@ -3,75 +3,193 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, Type, Compose, Exists, Forall, ForallRgn, Func,
-  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  type Expr, type Stmt, type Type, Compose, Exists, Forall, ForallRgn, Func,
+  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType, Type,
 }
-import gleam/bytes_builder.{type BytesBuilder, from_bit_array}
+import gleam/bytes_builder.{
+  type BytesBuilder, append_builder, from_bit_array, to_bit_array,
+}
 import gleam/dict.{type Dict}
 import gleam/int
 import gleam/result.{try}
 import gleam/list
 
-pub fn go(stmts: List(Stmt)) -> BytesBuilder {
-  
+pub fn go(stmts: List(Stmt)) -> Result(BitArray, String) {
+  let funcs =
+    list.index_fold(stmts, dict.new(), fn(acc, stmt, i) {
+      dict.insert(acc, stmt.name, i)
+    })
+  use l <- try(list.try_map(stmts, assemble_stmt(_, funcs)))
+  let #(ts_asm_l, defns_asm_l) = list.unzip(l)
+  let ts_asm =
+    bytes_builder.concat(list.map(ts_asm_l, append_builder(_, op_lced())))
+  let defns_asm = bytes_builder.concat(defns_asm_l)
+  let #(a, b, c, d) = bytes(list.length(stmts))
+  <<0:32, d:8, c:8, b:8, a:8>>
+  |> from_bit_array()
+  |> append_builder(ts_asm)
+  |> append_builder(defns_asm)
+  |> to_bit_array
+  |> Ok
 }
 
-fn assemble_expr(e: Expr, funcs: Dict(String, Int), ctsp: Int, ct_vars: Dict(String, Int)) -> Result(BytesBuilder, String) {
+fn assemble_stmt(
+  stmt: Stmt,
+  funcs: Dict(String, Int),
+) -> Result(#(BytesBuilder, BytesBuilder), String) {
+  let Stmt(_name, t, body) = stmt
+  use t_asm <- try(assemble_type(t, 0, dict.new()))
+  let #(starting_ct_stack, ctsp) = get_starting_ct_stack(t, 0)
+  use body_asm <- try(assemble_expr(body, funcs, ctsp, starting_ct_stack))
+  Ok(#(t_asm, body_asm))
+}
+
+fn assemble_expr(
+  e: Expr,
+  funcs: Dict(String, Int),
+  ctsp: Int,
+  ct_vars: Dict(String, Int),
+) -> Result(BytesBuilder, String) {
   case e {
     Lit(i) -> Ok(op_lit(i))
-    Func(name) -> 
+    Func(name) ->
       case dict.get(funcs, name) {
         Ok(n) -> Ok(op_global_func(n))
         Error(Nil) -> Error("unknown function `$" <> name <> "`")
       }
     Instr("app") -> Ok(op_app())
     Instr("unpack") -> Ok(op_unpack())
+    Instr("malloc") -> Ok(op_malloc())
+    Instr("call") -> Ok(op_call())
+    Instr("print") -> Ok(op_print())
+    Instr("halt") -> Ok(op_halt())
+    Instr("pack") -> Ok(op_pack())
+    Instr("new_rgn") -> Ok(op_new_rgn())
+    Instr("free_rgn") -> Ok(op_free_rgn())
+    Instr("deref") -> Ok(op_deref())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
-      use #(t_asm, _) <- try(assemble_type(t, ctsp, ct_vars))
+      use t_asm <- try(assemble_type(t, ctsp, ct_vars))
       Ok(t_asm)
     }
+    Compose(Lit(n), Instr("get")) -> Ok(op_get(n))
+    Compose(Lit(n), Instr("init")) -> Ok(op_init(n))
+    Compose(Lit(n), Instr("proj")) -> Ok(op_proj(n))
     Compose(f, g) -> {
       use f_asm <- try(assemble_expr(f, funcs, ctsp, ct_vars))
       use g_asm <- try(assemble_expr(g, funcs, ctsp, ct_vars))
-      Ok(bytes_builder.append_builder(f_asm, g_asm))
+      Ok(append_builder(f_asm, g_asm))
     }
   }
 }
 
-fn assemble_type(t: Type, ctsp: Int, ct_vars: Dict(String, Int)) -> Result(#(BytesBuilder, Dict(String, Int)), String) {
+fn get_starting_ct_stack(t: Type, ctsp: Int) -> #(Dict(String, Int), Int) {
+  case t {
+    Forall(var, _size, body) -> {
+      let #(ct_stack, out_ctsp) = get_starting_ct_stack(body, ctsp + 1)
+      #(dict.insert(ct_stack, var, ctsp), out_ctsp)
+    }
+    ForallRgn(r, _unique, body) -> {
+      let #(ct_stack, out_ctsp) = get_starting_ct_stack(body, ctsp + 1)
+      #(dict.insert(ct_stack, r, ctsp), out_ctsp)
+    }
+    _ -> #(dict.new(), ctsp)
+  }
+}
+
+fn assemble_type(
+  t: Type,
+  ctsp: Int,
+  ct_vars: Dict(String, Int),
+) -> Result(BytesBuilder, String) {
   case t {
     I32 -> Ok(op_i32())
-    TVar(name) -> 
+    TVar(name) ->
       case dict.get(ct_vars, name) {
         Ok(stack_pos) -> Ok(op_ct_get(ctsp - stack_pos - 1))
         Error(Nil) -> Error("unknown variable `" <> name <> "`")
       }
     FuncType(ts) -> {
-      use #(ts_asm, _) <- try(list.try_fold(from: #(bytes_builder.new(), ctsp), over: ts, with: fn(acc, t) {
-        let #(asm, ctsp) = acc
-        use #(t_asm, _) <- try(assemble_type(t, ctsp, ct_vars))
-        Ok(#(bytes_builder.append_builder(asm, t_asm), ctsp + 1))
-      }))
-      Ok(bytes_builder.append_builder(ts_asm, op_func(list.length(ts))))
+      use #(ts_asm, _) <- try(
+        list.try_fold(
+          from: #(bytes_builder.new(), ctsp),
+          over: ts,
+          with: fn(acc, t) {
+            let #(asm, ctsp) = acc
+            use t_asm <- try(assemble_type(t, ctsp, ct_vars))
+            Ok(#(append_builder(asm, t_asm), ctsp + 1))
+          },
+        ),
+      )
+      Ok(append_builder(ts_asm, op_func(list.length(ts))))
     }
     TupleType(ts) -> {
-      use #(ts_asm, _) <- try(list.try_fold(from: #(bytes_builder.new(), ctsp), over: ts, with: fn(acc, t) {
-        let #(asm, ctsp) = acc
-        use #(t_asm, _) <- try(assemble_type(t, ctsp, ct_vars))
-        Ok(#(bytes_builder.append_builder(asm, t_asm), ctsp + 1))
-      }))
-      Ok(bytes_builder.append_builder(ts_asm, op_tuple(list.length(ts))))
+      use #(ts_asm, _) <- try(
+        list.try_fold(
+          from: #(bytes_builder.new(), ctsp),
+          over: ts,
+          with: fn(acc, t) {
+            let #(asm, ctsp) = acc
+            use t_asm <- try(assemble_type(t, ctsp, ct_vars))
+            Ok(#(append_builder(asm, t_asm), ctsp + 1))
+          },
+        ),
+      )
+      Ok(append_builder(ts_asm, op_tuple(list.length(ts))))
     }
-    Ptr(t, r) -> 
+    Ptr(t, r) ->
       case dict.get(ct_vars, r) {
         Ok(pos) -> {
-          use #(t_asm, _) <- try(assemble_type(t, ctsp + 1, ct_vars))
-          Ok(bytes_builder(op_ct_get(ctsp - pos - 1), ))
+          use t_asm <- try(assemble_type(t, ctsp + 1, ct_vars))
+          op_ct_get(ctsp - pos - 1)
+          |> append_builder(t_asm)
+          |> append_builder(op_ptr())
+          |> Ok
         }
+        Error(Nil) -> Error("unknown region variable `" <> r <> "`")
+      }
+    Forall(var, size, body) -> {
+      use body_asm <- try(assemble_type(
+        body,
+        ctsp + 1,
+        dict.insert(ct_vars, var, ctsp),
+      ))
+      op_size(size)
+      |> append_builder(op_all())
+      |> append_builder(body_asm)
+      |> append_builder(op_end())
+      |> Ok
+    }
+    ForallRgn(r, unique, t) -> {
+      use t_asm <- try(assemble_type(t, ctsp + 1, dict.insert(ct_vars, r, ctsp)))
+      let unique_asm = case unique {
+        True -> op_unique()
+        False -> bytes_builder.new()
+      }
+      unique_asm
+      |> append_builder(op_rgn())
+      |> append_builder(t_asm)
+      |> append_builder(op_end())
+      |> Ok
+    }
+    Exists(var, size, body) -> {
+      use body_asm <- try(assemble_type(
+        body,
+        ctsp + 1,
+        dict.insert(ct_vars, var, ctsp),
+      ))
+      op_size(size)
+      |> append_builder(op_some())
+      |> append_builder(body_asm)
+      |> append_builder(op_end())
+      |> Ok
+    }
+    Handle(r) ->
+      case dict.get(ct_vars, r) {
+        Ok(pos) -> Ok(append_builder(op_ct_get(ctsp - pos - 1), op_handle()))
+        Error(Nil) -> Error("unknown region `" <> r <> "`")
       }
   }
-  todo
 }
 
 fn op_unique() {
@@ -131,7 +249,7 @@ fn op_get(n: Int) {
 }
 
 fn op_init(n: Int) {
-  from_bit_array(<<14:8, n: 8>>)
+  from_bit_array(<<14:8, n:8>>)
 }
 
 fn op_malloc() {
