@@ -3,8 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, Compose, Exists, Forall, ForallRgn, Func,
-  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType, Type,
+  type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
+  ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  Type,
 }
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
@@ -36,6 +37,12 @@ fn parse_instr() -> Parser(Expr, e) {
   party.map(word(), Instr)
 }
 
+fn parse_ct_assignment() -> Parser(Expr, e) {
+  use _ <- do(char("="))
+  use name <- do(word())
+  return(CTAssignment(name))
+}
+
 fn parse_type_expr() -> Parser(Expr, Nil) {
   use _ <- do(char("<"))
   use t <- do(parse_type())
@@ -46,15 +53,21 @@ fn parse_type_expr() -> Parser(Expr, Nil) {
 fn parse_expr() -> Parser(Expr, Nil) {
   use <- ws()
   use es <- do(sep1(
-    choice([parse_lit(), parse_func(), parse_type_expr(), parse_instr()]),
+    choice([
+      parse_lit(),
+      parse_func(),
+      parse_type_expr(),
+      parse_ct_assignment(),
+      parse_instr(),
+    ]),
     by: ws1(),
   ))
   use <- ws()
-  case es {
+  case list.reverse(es) {
     [] -> panic as "impossible"
     [e] -> return(e)
-    [e, ..rest] ->
-      list.fold(from: e, over: rest, with: Compose)
+    [last, ..rest] ->
+      list.fold(from: last, over: rest, with: fn(acc, e) { Compose(e, acc) })
       |> return
   }
 }
@@ -95,6 +108,7 @@ fn parse_forall() -> Parser(Type, Nil) {
   use var <- do(word())
   use <- ws()
   use _ <- do(char(":"))
+  use <- ws()
   use res <- do(perhaps(string("Rgn")))
   case res {
     Ok(_) -> {

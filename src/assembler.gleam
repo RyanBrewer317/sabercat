@@ -3,8 +3,9 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, Compose, Exists, Forall, ForallRgn, Func,
-  FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType, Type,
+  type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
+  ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  Type,
 }
 import gleam/bytes_builder.{
   type BytesBuilder, append_builder, from_bit_array, to_bit_array,
@@ -64,7 +65,6 @@ fn assemble_expr(
     Instr("print") -> Ok(op_print())
     Instr("halt") -> Ok(op_halt())
     Instr("pack") -> Ok(op_pack())
-    Instr("new_rgn") -> Ok(op_new_rgn())
     Instr("free_rgn") -> Ok(op_free_rgn())
     Instr("deref") -> Ok(op_deref())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
@@ -72,9 +72,29 @@ fn assemble_expr(
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
       Ok(t_asm)
     }
+    CTAssignment(_var) -> panic as "hi"
     Compose(Lit(n), Instr("get")) -> Ok(op_get(n))
+    Compose(Lit(n), Compose(Instr("get"), h)) -> {
+      use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
+      Ok(append_builder(op_get(n), h_asm))
+    }
     Compose(Lit(n), Instr("init")) -> Ok(op_init(n))
+    Compose(Lit(n), Compose(Instr("init"), h)) -> {
+      use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
+      Ok(append_builder(op_init(n), h_asm))
+    }
     Compose(Lit(n), Instr("proj")) -> Ok(op_proj(n))
+    Compose(Lit(n), Compose(Instr("proj"), h)) -> {
+      use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
+      Ok(append_builder(op_proj(n), h_asm))
+    }
+    Compose(Instr("new_rgn"), g) -> {
+      use g_asm <- try(assemble_expr(g, funcs, ctsp + 1, ct_vars))
+      Ok(append_builder(op_new_rgn(), g_asm))
+    }
+    Compose(CTAssignment(var), g) ->
+      assemble_expr(g, funcs, ctsp, dict.insert(ct_vars, var, ctsp - 1))
+    Compose(_f, CTAssignment(_var)) -> panic as "lo"
     Compose(f, g) -> {
       use f_asm <- try(assemble_expr(f, funcs, ctsp, ct_vars))
       use g_asm <- try(assemble_expr(g, funcs, ctsp, ct_vars))

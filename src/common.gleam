@@ -11,6 +11,7 @@ pub type Expr {
   Func(String)
   Instr(String)
   Type(Type)
+  CTAssignment(String)
   Compose(Expr, Expr)
 }
 
