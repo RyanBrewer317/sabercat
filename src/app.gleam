@@ -6,9 +6,14 @@ import simplifile
 import party
 import parser
 import assembler
+import shellout.{arguments}
 
 pub fn main() {
-  let assert Ok(s) = simplifile.read("main.svmt")
+  let filename = case arguments() {
+    [] -> "main.sc"
+    [s, ..] -> s
+  }
+  let assert Ok(s) = simplifile.read(filename)
   let assert Ok(parsed) = party.go(parser.go(), s)
   let assert Ok(builder) = assembler.go(parsed)
   simplifile.write_bits(builder, to: "bin.svm")
