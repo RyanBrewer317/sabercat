@@ -88,9 +88,10 @@ fn assemble_expr(
       use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
       Ok(append_builder(op_proj(n), h_asm))
     }
-    Compose(Instr("new_rgn"), g) -> {
+    Compose(Lit(n), Instr("new_rgn")) -> Ok(op_new_rgn(n))
+    Compose(Lit(n), Compose(Instr("new_rgn"), g)) -> {
       use g_asm <- try(assemble_expr(g, funcs, ctsp + 1, ct_vars))
-      Ok(append_builder(op_new_rgn(), g_asm))
+      Ok(append_builder(op_new_rgn(n), g_asm))
     }
     Compose(CTAssignment(var), g) ->
       assemble_expr(g, funcs, ctsp, dict.insert(ct_vars, var, ctsp - 1))
@@ -311,8 +312,9 @@ fn op_size(n: Int) {
   from_bit_array(<<23:8, d:8, c:8, b:8, a:8>>)
 }
 
-fn op_new_rgn() {
-  from_bit_array(<<24:8>>)
+fn op_new_rgn(n: Int) {
+  let #(a, b, c, d) = bytes(n)
+  from_bit_array(<<24:8, d:8, c:8, b:8, a:8>>)
 }
 
 fn op_free_rgn() {
