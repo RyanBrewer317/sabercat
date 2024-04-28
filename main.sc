@@ -8,7 +8,7 @@ fn main: ()->0 =
     21 new_rgn =r $destroyer <r> app $user call;
 
 fn user: Forall r: Rgn. (handle(r), (handle(r))->0)->0 =
-    1 get 1 <i32[]@r> malloc 4 0 arr_init 0 arr_proj print call;
+    1 get 1 <i32[]@r> malloc 2 -3 addi32 0 arr_init 0 arr_proj print call;
 
 fn destroyer: Forall r: Rgn!. (handle(r))->0 =
     free_rgn 0 halt;

@@ -69,6 +69,7 @@ fn assemble_expr(
     Instr("deref") -> Ok(op_deref())
     Instr("arr_init") -> Ok(op_arr_init())
     Instr("arr_proj") -> Ok(op_arr_proj())
+    Instr("addi32") -> Ok(op_add_i32())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
@@ -352,6 +353,10 @@ fn op_arr_init() {
 
 fn op_arr_proj() {
   from_bit_array(<<30:8>>)
+}
+
+fn op_add_i32() {
+  from_bit_array(<<31:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {

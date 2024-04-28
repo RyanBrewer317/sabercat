@@ -17,8 +17,13 @@ import gleam/list
 import gleam/result
 
 fn parse_lit() -> Parser(Expr, Nil) {
+  use res <- do(perhaps(char("-")))
+  let coeff = case res {
+    Ok(_) -> -1
+    Error(Nil) -> 1
+  }
   use n <- do(try(digits(), int.parse))
-  return(Lit(n))
+  return(Lit(coeff*n))
 }
 
 fn word() -> Parser(String, e) {
