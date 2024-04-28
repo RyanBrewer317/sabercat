@@ -16,7 +16,7 @@ Now that you've got your feet wet, here's a longer example:
 ```
 /* allocate a region, call `user` with the continuation `destroyer` */
 fn main: ()->0 = 
-    new_rgn =r $destroyer <r> app $user call;
+    20 new_rgn =r $destroyer <r> app $user call;
 
 /*
  * put a 1-element tuple in the given region, put 3 in the tuple, 
@@ -30,7 +30,7 @@ fn destroyer: Forall r: Rgn!. (handle(r))->0 =
     free_rgn 0 halt;
 ```
 This program puts `3` in a heap-allocated tuple, reads it back out onto the stack, prints it to stdout, and lastly frees the memory it used and exits normally. Some notes:
-- `new_rgn` creates a *region* (think big chunk of memory), pushes the pointer to it onto the stack, and pushes a compile-time reference to the region on the *compile-time stack.*
+- `new_rgn` creates a *region* (think big chunk of memory), pushes the pointer to it onto the stack, and pushes a compile-time reference to the region on the *compile-time stack.* In this case the region will have 20 bytes of memory; the minimum for a single tuple holding just an `i32`.
 - `=r` creates an identifier, `r`, for talking about the thing currently on top of the compile-time stack, in this case the new region.
 - `$` puts a function on the stack, in this case `destroyer` (functions are first-class but don't capture anything; it's like in C).
 - `<>` puts a compile-time thing on the compile-time stack, in this case a duplicate of the new region reference `r`.
