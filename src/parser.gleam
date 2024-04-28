@@ -5,7 +5,7 @@
 import common.{
   type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type,
+  Type, Array
 }
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
@@ -198,7 +198,20 @@ fn parse_type() -> Parser(Type, Nil) {
       use <- ws()
       return(Ptr(t, r))
     }
-    Error(Nil) -> return(t)
+    Error(Nil) -> {
+      use res <- do(perhaps(string("[]")))
+      case res {
+        Ok(_) -> {
+          use <- ws()
+          use _ <- do(char("@"))
+          use <- ws()
+          use r <- do(word())
+          use <- ws()
+          return(Array(t, r))
+        }
+        Error(Nil) -> return(t)
+      }
+    }
   }
 }
 

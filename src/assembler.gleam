@@ -5,7 +5,7 @@
 import common.{
   type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type,
+  Type, Array
 }
 import gleam/bytes_builder.{
   type BytesBuilder, append_builder, from_bit_array, to_bit_array,
@@ -67,6 +67,8 @@ fn assemble_expr(
     Instr("pack") -> Ok(op_pack())
     Instr("free_rgn") -> Ok(op_free_rgn())
     Instr("deref") -> Ok(op_deref())
+    Instr("arr_init") -> Ok(op_arr_init())
+    Instr("arr_proj") -> Ok(op_arr_proj())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
@@ -210,6 +212,17 @@ fn assemble_type(
         Ok(pos) -> Ok(append_builder(op_ct_get(ctsp - pos - 1), op_handle()))
         Error(Nil) -> Error("unknown region `" <> r <> "`")
       }
+    Array(t, r) ->
+      case dict.get(ct_vars, r) {
+        Ok(pos) -> {
+          use t_asm <- try(assemble_type(t, ctsp, ct_vars))
+          op_ct_get(ctsp - pos - 1)
+          |> append_builder(t_asm)
+          |> append_builder(op_arr())
+          |> Ok
+        }
+        Error(Nil) -> Error("unknown region `" <> r <> "`")
+      }
   }
 }
 
@@ -327,6 +340,18 @@ fn op_ptr() {
 
 fn op_deref() {
   from_bit_array(<<27:8>>)
+}
+
+fn op_arr() {
+  from_bit_array(<<28:8>>)
+}
+
+fn op_arr_init() {
+  from_bit_array(<<29:8>>)
+}
+
+fn op_arr_proj() {
+  from_bit_array(<<30:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {

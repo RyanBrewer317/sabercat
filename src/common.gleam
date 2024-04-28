@@ -25,4 +25,5 @@ pub type Type {
   ForallRgn(String, Bool, Type)
   Exists(String, Int, Type)
   Handle(String)
+  Array(Type, String)
 }
