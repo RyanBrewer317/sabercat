@@ -5,10 +5,22 @@
  */
 
 fn main: ()->0 = 
-    21 new_rgn =r $destroyer <r> app $user call;
+    7 $end $fact call;
 
-fn user: Forall r: Rgn. (handle(r), (handle(r))->0)->0 =
-    1 get 1 <i32[]@r> malloc 2 -3 addi32 0 arr_init 0 arr_proj print call;
+/* in, out, k */
+fn fact_helper: (i32, i32, (i32)->0)->0 =
+    2 get $fact_step $fact_base callnz;
 
-fn destroyer: Forall r: Rgn!. (handle(r))->0 =
-    free_rgn 0 halt;
+/* in, out, k */
+fn fact_base: (i32, i32, (i32)->0)->0 =
+    call;
+
+/* in, out, k */
+fn fact_step: (i32, i32, (i32)->0)->0 =
+    2 get /*in,out,k,in*/ -1 addi32 /*in-1*/ 3 get 3 get muli32 /*in*out*/ 2 get /*k*/ $fact_helper call;
+
+fn fact: (i32, (i32)->0)->0 =
+    1 get 1 2 get $fact_helper call;
+
+fn end: (i32)->0 =
+    print 0 halt;

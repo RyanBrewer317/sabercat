@@ -47,3 +47,28 @@ This program puts `3` in a heap-allocated tuple, reads it back out onto the stac
 - `proj` pops a tuple and a compile-time-known integer literal (which I'll call `i`) and pushes the `i`th component of the tuple onto the stack. That component must have been previously initialized with `init`.
 - `print` pops an `i32` off the stack and writes it to stdout, with a newline after it.
 - `free_rgn` pops a compile-time region reference off the stack, in this case the `r` of the type signature, and also pops a pointer to that region off the stack. It frees the region and makes it impossible for subsequent code to refer to the freed region.
+
+
+Here's a program that prints 7 factorial:
+```
+fn main: ()->0 = 
+    7 $end $fact call;
+
+/* in, out, k */
+fn fact_helper: (i32, i32, (i32)->0)->0 =
+    2 get $fact_step $fact_base callnz;
+
+/* in, out, k */
+fn fact_base: (i32, i32, (i32)->0)->0 =
+    call;
+
+/* in, out, k */
+fn fact_step: (i32, i32, (i32)->0)->0 =
+    2 get /*in,out,k,in*/ -1 addi32 /*in-1*/ 3 get 3 get muli32 /*in*out*/ 2 get /*k*/ $fact_helper call;
+
+fn fact: (i32, (i32)->0)->0 =
+    1 get 1 2 get $fact_helper call;
+
+fn end: (i32)->0 =
+    print 0 halt;
+```

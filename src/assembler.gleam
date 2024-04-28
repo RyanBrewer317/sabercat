@@ -70,6 +70,9 @@ fn assemble_expr(
     Instr("arr_init") -> Ok(op_arr_init())
     Instr("arr_proj") -> Ok(op_arr_proj())
     Instr("addi32") -> Ok(op_add_i32())
+    Instr("muli32") -> Ok(op_mul_i32())
+    Instr("divi32") -> Ok(op_div_i32())
+    Instr("callnz") -> Ok(op_call_nz())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
@@ -357,6 +360,18 @@ fn op_arr_proj() {
 
 fn op_add_i32() {
   from_bit_array(<<31:8>>)
+}
+
+fn op_mul_i32() {
+  from_bit_array(<<32:8>>)
+}
+
+fn op_div_i32() {
+  from_bit_array(<<33:8>>)
+}
+
+fn op_call_nz() {
+  from_bit_array(<<34:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {
