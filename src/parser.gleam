@@ -5,7 +5,7 @@
 import common.{
   type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type, Array
+  Type, Array, U8
 }
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
@@ -84,6 +84,11 @@ fn parse_tvar() -> Parser(Type, e) {
 fn parse_i32_type() -> Parser(Type, e) {
   use _ <- do(string("i32"))
   return(I32)
+}
+
+fn parse_u8_type() -> Parser(Type, e) {
+  use _ <- do(string("u8"))
+  return(U8)
 }
 
 fn parenthetical_t() -> Parser(Type, Nil) {
@@ -187,6 +192,7 @@ fn parse_type() -> Parser(Type, Nil) {
   use t <- do(
     choice([
       parse_i32_type(),
+      parse_u8_type(),
       parenthetical_t(),
       parse_forall(),
       parse_exists(),

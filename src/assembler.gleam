@@ -5,7 +5,7 @@
 import common.{
   type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type, Array
+  Type, Array, U8
 }
 import gleam/bytes_builder.{
   type BytesBuilder, append_builder, from_bit_array, to_bit_array,
@@ -140,6 +140,7 @@ fn assemble_type(
 ) -> Result(BytesBuilder, String) {
   case t {
     I32 -> Ok(op_i32())
+    U8 -> Ok(op_u8())
     TVar(name) ->
       case dict.get(ct_vars, name) {
         Ok(stack_pos) -> Ok(op_ct_get(ctsp - stack_pos - 1))
@@ -405,6 +406,10 @@ fn op_data(n: Int) {
 
 fn op_data_sec() {
   from_bit_array(<<36:8>>)
+}
+
+fn op_u8() {
+  from_bit_array(<<37:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {

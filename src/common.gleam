@@ -17,6 +17,7 @@ pub type Expr {
 
 pub type Type {
   I32
+  U8
   TVar(String)
   FuncType(List(Type))
   TupleType(List(Type))
