@@ -3,18 +3,18 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
+  type Expr, type Stmt, type Type, Array, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type, Array, U8
+  Type, U8,
 }
+import gleam/int
+import gleam/list
+import gleam/result
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
   lowercase_letter, many, many1, many_concat, not, perhaps, return, satisfy, sep,
   sep1, string, try, until,
 }
-import gleam/int
-import gleam/list
-import gleam/result
 
 fn parse_lit() -> Parser(Expr, Nil) {
   use res <- do(perhaps(char("-")))
@@ -23,7 +23,7 @@ fn parse_lit() -> Parser(Expr, Nil) {
     Error(Nil) -> 1
   }
   use n <- do(try(digits(), int.parse))
-  return(Lit(coeff*n))
+  return(Lit(coeff * n))
 }
 
 fn word() -> Parser(String, e) {

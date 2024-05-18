@@ -3,20 +3,26 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import common.{
-  type Expr, type Stmt, type Type, CTAssignment, Compose, Exists, Forall,
+  type Expr, type Stmt, type Type, Array, CTAssignment, Compose, Exists, Forall,
   ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
-  Type, Array, U8
+  Type, U8,
 }
 import gleam/bytes_builder.{
   type BytesBuilder, append_builder, from_bit_array, to_bit_array,
 }
 import gleam/dict.{type Dict}
 import gleam/int
-import gleam/result.{try}
 import gleam/list
+import gleam/result.{try}
 
-pub fn go(data_section: List(Int), stmts: List(Stmt)) -> Result(BitArray, String) {
-  let data_section_builder = bytes_builder.concat(list.map(data_section, fn(i) { from_bit_array(<<i:8>>) }))
+pub fn go(
+  data_section: List(Int),
+  stmts: List(Stmt),
+) -> Result(BitArray, String) {
+  let data_section_builder =
+    bytes_builder.concat(
+      list.map(data_section, fn(i) { from_bit_array(<<i:8>>) }),
+    )
   let funcs =
     list.index_fold(stmts, dict.new(), fn(acc, stmt, i) {
       dict.insert(acc, stmt.name, i)
@@ -27,7 +33,7 @@ pub fn go(data_section: List(Int), stmts: List(Stmt)) -> Result(BitArray, String
     bytes_builder.concat(list.map(ts_asm_l, append_builder(_, op_lced())))
   let defns_asm = bytes_builder.concat(defns_asm_l)
   let #(a, b, c, d) = bytes(list.length(stmts))
-  let #(w, x,  y,  z) = bytes(list.length(data_section))
+  let #(w, x, y, z) = bytes(list.length(data_section))
   <<z:8, y:8, x:8, w:8>>
   |> from_bit_array()
   |> append_builder(data_section_builder)

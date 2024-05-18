@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import gleam/string
-import gleam/int
 import gleam/bytes_builder.{type BytesBuilder, from_bit_array}
-import simplifile
+import gleam/int
+import gleam/string
 import party.{
   type Parser, alphanum, char, digits, do, either, letter, many, many1, perhaps,
   return, satisfy, string,
 }
+import simplifile
 
 fn e(bits: BitArray) -> Parser(BytesBuilder, e) {
   return(from_bit_array(bits))
