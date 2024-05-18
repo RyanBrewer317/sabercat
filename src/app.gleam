@@ -16,5 +16,11 @@ pub fn main() {
   let assert Ok(s) = simplifile.read(filename)
   let assert Ok(#(data_section, parsed)) = party.go(parser.go(), s)
   let assert Ok(builder) = assembler.go(data_section, parsed)
-  simplifile.write_bits(builder, to: "bin.svm")
+  let assert Ok(_) = simplifile.write_bits(builder, to: "bin.svm")
+  shellout.command(
+    in: ".",
+    run: "../SaberVM/target/debug/sabervm",
+    with: [],
+    opt: [shellout.LetBeStderr, shellout.LetBeStdout],
+  )
 }
