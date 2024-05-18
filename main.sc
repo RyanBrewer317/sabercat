@@ -4,14 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-/* an array of bytes at the start of the executable */
-data: [2 0 0 0 3 0 0 0 4 0 0 0]
+data: [82 121 97 110 32 108 111 118 101 115 32 73 118 121 33 10]
 
-/* 
- * `<i32[]@data_section> 4 data` pushes an immutable pointer to the 4th byte of the data section
- * interpreting the bytes from there to the end of the data section as an i32 array
- */
-fn main: ()->0 = <i32[]@data_section> 4 data 0 arr_proj print 0 halt;
+fn main: ()->0 = 
+    <u8[]@data_section> 0 data print
+    0 halt;
 
 
 

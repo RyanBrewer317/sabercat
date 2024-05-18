@@ -83,6 +83,7 @@ fn assemble_expr(
     Instr("muli32") -> Ok(op_mul_i32())
     Instr("divi32") -> Ok(op_div_i32())
     Instr("callnz") -> Ok(op_call_nz())
+    Instr("print_n") -> Ok(op_print_n())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
@@ -416,6 +417,10 @@ fn op_data_sec() {
 
 fn op_u8() {
   from_bit_array(<<37:8>>)
+}
+
+fn op_print_n() {
+  from_bit_array(<<38:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {
