@@ -15,7 +15,8 @@ import gleam/int
 import gleam/result.{try}
 import gleam/list
 
-pub fn go(stmts: List(Stmt)) -> Result(BitArray, String) {
+pub fn go(data_section: List(Int), stmts: List(Stmt)) -> Result(BitArray, String) {
+  let data_section_builder = bytes_builder.concat(list.map(data_section, fn(i) { from_bit_array(<<i:8>>) }))
   let funcs =
     list.index_fold(stmts, dict.new(), fn(acc, stmt, i) {
       dict.insert(acc, stmt.name, i)
@@ -26,8 +27,11 @@ pub fn go(stmts: List(Stmt)) -> Result(BitArray, String) {
     bytes_builder.concat(list.map(ts_asm_l, append_builder(_, op_lced())))
   let defns_asm = bytes_builder.concat(defns_asm_l)
   let #(a, b, c, d) = bytes(list.length(stmts))
-  <<0:32, d:8, c:8, b:8, a:8>>
+  let #(w, x,  y,  z) = bytes(list.length(data_section))
+  <<z:8, y:8, x:8, w:8>>
   |> from_bit_array()
+  |> append_builder(data_section_builder)
+  |> bytes_builder.append(<<d:8, c:8, b:8, a:8>>)
   |> append_builder(ts_asm)
   |> append_builder(defns_asm)
   |> to_bit_array
@@ -99,6 +103,11 @@ fn assemble_expr(
       use g_asm <- try(assemble_expr(g, funcs, ctsp + 1, ct_vars))
       Ok(append_builder(op_new_rgn(n), g_asm))
     }
+    Compose(Lit(n), Instr("data")) -> Ok(op_data(n))
+    Compose(Lit(n), Compose(Instr("data"), g)) -> {
+      use g_asm <- try(assemble_expr(g, funcs, ctsp, ct_vars))
+      Ok(append_builder(op_data(n), g_asm))
+    }
     Compose(CTAssignment(var), g) ->
       assemble_expr(g, funcs, ctsp, dict.insert(ct_vars, var, ctsp - 1))
     Compose(_f, CTAssignment(_var)) -> panic as "lo"
@@ -164,6 +173,13 @@ fn assemble_type(
       )
       Ok(append_builder(ts_asm, op_tuple(list.length(ts))))
     }
+    Ptr(t, "data_section") -> {
+      use t_asm <- try(assemble_type(t, ctsp + 1, ct_vars))
+      op_data_sec()
+      |> append_builder(t_asm)
+      |> append_builder(op_ptr())
+      |> Ok
+    }
     Ptr(t, r) ->
       case dict.get(ct_vars, r) {
         Ok(pos) -> {
@@ -211,15 +227,23 @@ fn assemble_type(
       |> append_builder(op_end())
       |> Ok
     }
+    Handle("data_section") -> Error("data section doesn't have a handler")
     Handle(r) ->
       case dict.get(ct_vars, r) {
         Ok(pos) -> Ok(append_builder(op_ct_get(ctsp - pos - 1), op_handle()))
         Error(Nil) -> Error("unknown region `" <> r <> "`")
       }
+    Array(t, "data_section") -> {
+      use t_asm <- try(assemble_type(t, ctsp + 1, ct_vars))
+      op_data_sec()
+      |> append_builder(t_asm)
+      |> append_builder(op_arr())
+      |> Ok
+    }
     Array(t, r) ->
       case dict.get(ct_vars, r) {
         Ok(pos) -> {
-          use t_asm <- try(assemble_type(t, ctsp, ct_vars))
+          use t_asm <- try(assemble_type(t, ctsp + 1, ct_vars))
           op_ct_get(ctsp - pos - 1)
           |> append_builder(t_asm)
           |> append_builder(op_arr())
@@ -372,6 +396,15 @@ fn op_div_i32() {
 
 fn op_call_nz() {
   from_bit_array(<<34:8>>)
+}
+
+fn op_data(n: Int) {
+  let #(a, b, c, d) = bytes(n)
+  from_bit_array(<<35:8, d:8, c:8, b:8, a:8>>)
+}
+
+fn op_data_sec() {
+  from_bit_array(<<36:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {

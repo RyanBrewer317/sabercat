@@ -236,8 +236,24 @@ fn parse_stmt() -> Parser(Stmt, Nil) {
   return(Stmt(name, t, e))
 }
 
-pub fn go() -> Parser(List(Stmt), Nil) {
+fn parse_data_section() -> Parser(List(Int), Nil) {
+  use <- ws()
+  use res <- do(perhaps(string("data:")))
+  case res {
+    Ok(_) -> {
+      use <- ws()
+      use _ <- do(char("["))
+      use bytes <- do(sep(party.try(digits(), int.parse), by: ws1()))
+      use _ <- do(char("]"))
+      return(bytes)
+    }
+    Error(Nil) -> return([])
+  }
+}
+
+pub fn go() -> Parser(#(List(Int), List(Stmt)), Nil) {
+  use data_section <- do(parse_data_section())
   use stmts <- do(many1(parse_stmt()))
   use _ <- do(end())
-  return(stmts)
+  return(#(data_section, stmts))
 }

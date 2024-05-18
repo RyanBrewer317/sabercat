@@ -4,23 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-fn main: ()->0 = 
-    7 $end $fact call;
+/* an array of bytes at the start of the executable */
+data: [2 0 0 0 3 0 0 0 4 0 0 0]
 
-/* in, out, k */
-fn fact_helper: (i32, i32, (i32)->0)->0 =
-    2 get $fact_step $fact_base callnz;
+/* 
+ * `<i32[]@data_section> 4 data` pushes an immutable pointer to the 4th byte of the data section
+ * interpreting the bytes from there to the end of the data section as an i32 array
+ */
+fn main: ()->0 = <i32[]@data_section> 4 data 1 arr_proj print 0 halt;
 
-/* in, out, k */
-fn fact_base: (i32, i32, (i32)->0)->0 =
-    call;
 
-/* in, out, k */
-fn fact_step: (i32, i32, (i32)->0)->0 =
-    2 get /*in,out,k,in*/ -1 addi32 /*in-1*/ 3 get 3 get muli32 /*in*out*/ 2 get /*k*/ $fact_helper call;
 
-fn fact: (i32, (i32)->0)->0 =
-    1 get 1 2 get $fact_helper call;
-
-fn end: (i32)->0 =
-    print 0 halt;
