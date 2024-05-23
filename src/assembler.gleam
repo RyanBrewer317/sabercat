@@ -4,7 +4,7 @@
 
 import common.{
   type Expr, type Stmt, type Type, Array, CTAssignment, Compose, Exists, Forall,
-  ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  ForallRgn, Func, FuncType, Handle, I32, Instr, I32Lit, U8Lit, Ptr, Stmt, TVar, TupleType,
   Type, U8,
 }
 import gleam/bytes_builder.{
@@ -62,7 +62,8 @@ fn assemble_expr(
   ct_vars: Dict(String, Int),
 ) -> Result(BytesBuilder, String) {
   case e {
-    Lit(i) -> Ok(op_lit(i))
+    I32Lit(i) -> Ok(op_lit(i))
+    U8Lit(i) -> Ok(op_u8_lit(i))
     Func(name) ->
       case dict.get(funcs, name) {
         Ok(n) -> Ok(op_global_func(n))
@@ -79,39 +80,39 @@ fn assemble_expr(
     Instr("deref") -> Ok(op_deref())
     Instr("arr_init") -> Ok(op_arr_init())
     Instr("arr_proj") -> Ok(op_arr_proj())
-    Instr("addi32") -> Ok(op_add_i32())
-    Instr("muli32") -> Ok(op_mul_i32())
-    Instr("divi32") -> Ok(op_div_i32())
+    Instr("add") -> Ok(op_add())
+    Instr("mul") -> Ok(op_mul())
+    Instr("div") -> Ok(op_div())
     Instr("callnz") -> Ok(op_call_nz())
-    Instr("print_n") -> Ok(op_print_n())
+    Instr("copy_n") -> Ok(op_copy_n())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
       Ok(t_asm)
     }
     CTAssignment(_var) -> panic as "hi"
-    Compose(Lit(n), Instr("get")) -> Ok(op_get(n))
-    Compose(Lit(n), Compose(Instr("get"), h)) -> {
+    Compose(I32Lit(n), Instr("get")) -> Ok(op_get(n))
+    Compose(I32Lit(n), Compose(Instr("get"), h)) -> {
       use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
       Ok(append_builder(op_get(n), h_asm))
     }
-    Compose(Lit(n), Instr("init")) -> Ok(op_init(n))
-    Compose(Lit(n), Compose(Instr("init"), h)) -> {
+    Compose(I32Lit(n), Instr("init")) -> Ok(op_init(n))
+    Compose(I32Lit(n), Compose(Instr("init"), h)) -> {
       use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
       Ok(append_builder(op_init(n), h_asm))
     }
-    Compose(Lit(n), Instr("proj")) -> Ok(op_proj(n))
-    Compose(Lit(n), Compose(Instr("proj"), h)) -> {
+    Compose(I32Lit(n), Instr("proj")) -> Ok(op_proj(n))
+    Compose(I32Lit(n), Compose(Instr("proj"), h)) -> {
       use h_asm <- try(assemble_expr(h, funcs, ctsp, ct_vars))
       Ok(append_builder(op_proj(n), h_asm))
     }
-    Compose(Lit(n), Instr("new_rgn")) -> Ok(op_new_rgn(n))
-    Compose(Lit(n), Compose(Instr("new_rgn"), g)) -> {
+    Compose(I32Lit(n), Instr("new_rgn")) -> Ok(op_new_rgn(n))
+    Compose(I32Lit(n), Compose(Instr("new_rgn"), g)) -> {
       use g_asm <- try(assemble_expr(g, funcs, ctsp + 1, ct_vars))
       Ok(append_builder(op_new_rgn(n), g_asm))
     }
-    Compose(Lit(n), Instr("data")) -> Ok(op_data(n))
-    Compose(Lit(n), Compose(Instr("data"), g)) -> {
+    Compose(I32Lit(n), Instr("data")) -> Ok(op_data(n))
+    Compose(I32Lit(n), Compose(Instr("data"), g)) -> {
       use g_asm <- try(assemble_expr(g, funcs, ctsp, ct_vars))
       Ok(append_builder(op_data(n), g_asm))
     }
@@ -146,7 +147,7 @@ fn assemble_type(
   ct_vars: Dict(String, Int),
 ) -> Result(BytesBuilder, String) {
   case t {
-    I32 -> Ok(op_i32())
+    I32 -> Ok(op())
     U8 -> Ok(op_u8())
     TVar(name) ->
       case dict.get(ct_vars, name) {
@@ -270,7 +271,7 @@ fn op_handle() {
   from_bit_array(<<1:8>>)
 }
 
-fn op_i32() {
+fn op() {
   from_bit_array(<<2:8>>)
 }
 
@@ -390,15 +391,15 @@ fn op_arr_proj() {
   from_bit_array(<<30:8>>)
 }
 
-fn op_add_i32() {
+fn op_add() {
   from_bit_array(<<31:8>>)
 }
 
-fn op_mul_i32() {
+fn op_mul() {
   from_bit_array(<<32:8>>)
 }
 
-fn op_div_i32() {
+fn op_div() {
   from_bit_array(<<33:8>>)
 }
 
@@ -419,8 +420,12 @@ fn op_u8() {
   from_bit_array(<<37:8>>)
 }
 
-fn op_print_n() {
+fn op_copy_n() {
   from_bit_array(<<38:8>>)
+}
+
+fn op_u8_lit(n) {
+  from_bit_array(<<39:8, n:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {

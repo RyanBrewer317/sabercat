@@ -7,6 +7,7 @@ import parser
 import party
 import shellout.{arguments}
 import simplifile
+import gleam/erlang/process
 
 pub fn main() {
   let filename = case arguments() {
@@ -17,10 +18,11 @@ pub fn main() {
   let assert Ok(#(data_section, parsed)) = party.go(parser.go(), s)
   let assert Ok(builder) = assembler.go(data_section, parsed)
   let assert Ok(_) = simplifile.write_bits(builder, to: "bin.svm")
-  shellout.command(
+  let assert Ok(_) = shellout.command(
     in: ".",
-    run: "../SaberVM/target/debug/sabervm",
+    run: "../SaberVM/target/release/sabervm",
     with: [],
     opt: [shellout.LetBeStderr, shellout.LetBeStdout],
   )
+  process.sleep(500)
 }

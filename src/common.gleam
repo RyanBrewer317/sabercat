@@ -7,7 +7,8 @@ pub type Stmt {
 }
 
 pub type Expr {
-  Lit(Int)
+  I32Lit(Int)
+  U8Lit(Int)
   Func(String)
   Instr(String)
   Type(Type)

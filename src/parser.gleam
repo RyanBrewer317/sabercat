@@ -4,7 +4,7 @@
 
 import common.{
   type Expr, type Stmt, type Type, Array, CTAssignment, Compose, Exists, Forall,
-  ForallRgn, Func, FuncType, Handle, I32, Instr, Lit, Ptr, Stmt, TVar, TupleType,
+  ForallRgn, Func, FuncType, Handle, I32, Instr, I32Lit, U8Lit, Ptr, Stmt, TVar, TupleType,
   Type, U8,
 }
 import gleam/int
@@ -23,7 +23,11 @@ fn parse_lit() -> Parser(Expr, Nil) {
     Error(Nil) -> 1
   }
   use n <- do(try(digits(), int.parse))
-  return(Lit(coeff * n))
+  use res <- do(perhaps(string("u8")))
+  case res {
+    Ok(_) -> return(U8Lit(coeff * n))
+    Error(Nil) -> return(I32Lit(coeff * n))
+  }
 }
 
 fn word() -> Parser(String, e) {

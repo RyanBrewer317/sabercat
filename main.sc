@@ -7,8 +7,8 @@
 data: [82 121 97 110 32 108 111 118 101 115 32 73 118 121 33 10]
 
 fn main: ()->0 = 
-    <u8[]@data_section> 0 data print
-    0 halt;
+    <u8[]@data_section> 0 data 100 new_rgn 4 copy_n print
+    0u8 halt;
 
 
 
