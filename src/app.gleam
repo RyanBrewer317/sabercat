@@ -7,7 +7,6 @@ import parser
 import party
 import shellout.{arguments}
 import simplifile
-import gleam/erlang/process
 
 pub fn main() {
   let filename = case arguments() {
@@ -24,5 +23,4 @@ pub fn main() {
     with: [],
     opt: [shellout.LetBeStderr, shellout.LetBeStdout],
   )
-  process.sleep(500)
 }

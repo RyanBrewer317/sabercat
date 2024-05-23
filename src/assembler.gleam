@@ -78,7 +78,7 @@ fn assemble_expr(
     Instr("pack") -> Ok(op_pack())
     Instr("free_rgn") -> Ok(op_free_rgn())
     Instr("deref") -> Ok(op_deref())
-    Instr("arr_init") -> Ok(op_arr_init())
+    Instr("arr_mut") -> Ok(op_arr_mut())
     Instr("arr_proj") -> Ok(op_arr_proj())
     Instr("add") -> Ok(op_add())
     Instr("mul") -> Ok(op_mul())
@@ -383,7 +383,7 @@ fn op_arr() {
   from_bit_array(<<28:8>>)
 }
 
-fn op_arr_init() {
+fn op_arr_mut() {
   from_bit_array(<<29:8>>)
 }
 
