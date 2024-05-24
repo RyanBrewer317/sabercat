@@ -113,6 +113,7 @@ fn assemble_expr(
     Instr("callnz") -> Ok(op_call_nz())
     Instr("copy_n") -> Ok(op_copy_n())
     Instr("u8_to_i32") -> Ok(op_u8_to_i32())
+    Instr("modulo") -> Ok(op_modulo())
     Instr(instr) -> Error("unknown instruction `" <> instr <> "`")
     Type(t) -> {
       use t_asm <- try(assemble_type(t, ctsp, ct_vars))
@@ -510,6 +511,10 @@ fn op_export(x: Int, y: Int, z: Int, w: Int) {
     bx:8,
     ax:8,
   >>)
+}
+
+fn op_modulo() {
+  from_bit_array(<<43:8>>)
 }
 
 fn bytes(n: Int) -> #(Int, Int, Int, Int) {
