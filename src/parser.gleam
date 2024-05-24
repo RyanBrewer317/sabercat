@@ -13,7 +13,7 @@ import gleam/result
 import party.{
   type Parser, alphanum, char, choice, digits, do, either, end, lazy,
   lowercase_letter, many, many1, many_concat, not, perhaps, return, satisfy, sep,
-  sep1, string, try, until,
+  sep1, string, try, until, seq
 }
 
 fn parse_lit() -> Parser(Expr, Nil) {
@@ -230,8 +230,28 @@ fn parse_type() -> Parser(Type, Nil) {
   }
 }
 
+fn parse_import() -> Parser(#(String, Type), Nil) {
+  use <- ws()
+  use _ <- do(string("import"))
+  use _ <- do(not(either(alphanum(), char("_"))))
+  use <- ws()
+  use name <- do(word())
+  use <- ws()
+  use _ <- do(char(":"))
+  use t <- do(parse_type())
+  use _ <- do(char(";"))
+  use <- ws()
+  return(#(name, t))
+}
+
+fn parse_imports() -> Parser(List(#(String, Type)), Nil) {
+  many(parse_import())
+}
+
 fn parse_stmt() -> Parser(Stmt, Nil) {
   use <- ws()
+  use res <- do(perhaps(seq(string("pub"), ws1())))
+  let exported = result.is_ok(res)
   use _ <- do(string("fn"))
   use _ <- do(not(either(alphanum(), char("_"))))
   use <- ws()
@@ -243,7 +263,7 @@ fn parse_stmt() -> Parser(Stmt, Nil) {
   use e <- do(parse_expr())
   use _ <- do(char(";"))
   use <- ws()
-  return(Stmt(name, t, e))
+  return(Stmt(name, exported, t, e))
 }
 
 fn parse_data_section() -> Parser(List(Int), Nil) {
@@ -261,9 +281,10 @@ fn parse_data_section() -> Parser(List(Int), Nil) {
   }
 }
 
-pub fn go() -> Parser(#(List(Int), List(Stmt)), Nil) {
+pub fn go() -> Parser(#(List(Int), List(#(String, Type)), List(Stmt)), Nil) {
   use data_section <- do(parse_data_section())
+  use imports <- do(parse_imports())
   use stmts <- do(many1(parse_stmt()))
   use _ <- do(end())
-  return(#(data_section, stmts))
+  return(#(data_section, imports, stmts))
 }

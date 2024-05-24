@@ -14,13 +14,13 @@ pub fn main() {
     [s, ..] -> s
   }
   let assert Ok(s) = simplifile.read(filename)
-  let assert Ok(#(data_section, parsed)) = party.go(parser.go(), s)
-  let assert Ok(builder) = assembler.go(data_section, parsed)
+  let assert Ok(#(data_section, imports, parsed)) = party.go(parser.go(), s)
+  let assert Ok(builder) = assembler.go(data_section, imports, parsed)
   let assert Ok(_) = simplifile.write_bits(builder, to: "bin.svm")
   let assert Ok(_) = shellout.command(
     in: ".",
     run: "../SaberVM/target/release/sabervm",
-    with: [],
+    with: ["bin.svm"],
     opt: [shellout.LetBeStderr, shellout.LetBeStdout],
   )
 }

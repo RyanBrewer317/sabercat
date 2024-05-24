@@ -3,7 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 pub type Stmt {
-  Stmt(name: String, t: Type, body: Expr)
+  Stmt(name: String, exported: Bool, t: Type, body: Expr)
 }
 
 pub type Expr {
